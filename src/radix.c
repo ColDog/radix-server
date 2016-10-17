@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "key.c"
+#include "list.h"
 
 int log_search = 0;
 
@@ -32,7 +33,7 @@ typedef struct node {
   struct node *next_sibling;
 } node_t;
 
-node_t *node_new(node_key_t *part) {
+node_t *radix_new(node_key_t *part) {
   node_t *node = NULL;
   node = malloc(sizeof(node_t));
   node->part = part;
@@ -44,13 +45,13 @@ node_t *node_new(node_key_t *part) {
 }
 
 // creates a new node from  a string.
-node_t *node_snew(char *s) {
+node_t *radix_snew(char *s) {
   node_key_t *dest = malloc(sizeof(node_key_t));
   strncpy(*dest, s, strlen(s));
-  return node_new(dest);
+  return radix_new(dest);
 }
 
-void node_insert(node_t **root, node_key_t *val) {
+void radix_insert(node_t **root, node_key_t *val) {
   node_t *node = *root;
 
   // if this is a null node, we just add the value to this.
@@ -68,13 +69,13 @@ void node_insert(node_t **root, node_key_t *val) {
       // values. The original node takes over as the
 
       // create a 'next_node' which takes over this nodes children.
-      node_t *next_node = node_new(from(node->part, i));
+      node_t *next_node = radix_new(from(node->part, i));
       next_node->first_child = node->first_child;
       node->first_child = next_node;
 
 
       // create a new sibling.
-      node_t *new_sibling = node_new(from(val, i));
+      node_t *new_sibling = radix_new(from(val, i));
       next_node->next_sibling = new_sibling;
 
 
@@ -91,7 +92,7 @@ void node_insert(node_t **root, node_key_t *val) {
   // We reached the end, that means everything matches with this insert so far.
   if (node->first_child == NULL) {
     // this node doesn't have any children yet! we can add ourselves as the first.
-    node->first_child = node_new(next_part);
+    node->first_child = radix_new(next_part);
     return;
   }
 
@@ -104,7 +105,7 @@ void node_insert(node_t **root, node_key_t *val) {
     while (cur->next_sibling != NULL) {
       cur = cur->next_sibling;
     }
-    cur->next_sibling = node_new(next_part);
+    cur->next_sibling = radix_new(next_part);
     return;
   }
 
@@ -117,7 +118,7 @@ void node_insert(node_t **root, node_key_t *val) {
       // we found a sibling to continue on with!
       // insert will walk through this sibling and either split it or find a
       // child to add it to.
-      return node_insert(&cur, next_part);
+      return radix_insert(&cur, next_part);
     }
 
     if (cur->next_sibling == NULL) {
@@ -130,16 +131,16 @@ void node_insert(node_t **root, node_key_t *val) {
   // No siblings start with what this starts with, so, lets create the sibling!
   // Note, since we reached the end 'cur' should be the last sibling.
   // printf("adding next part %s as sibling of %s\n", *next_part, *cur->part);
-  cur->next_sibling = node_new(next_part);
+  cur->next_sibling = radix_new(next_part);
 }
 
-void node_sinsert(node_t **root, char *sval) {
+void radix_sinsert(node_t **root, char *sval) {
   node_key_t *dest = malloc(sizeof(node_key_t));
   strncpy(*dest, sval, strlen(sval));
-  return node_insert(root, dest);
+  return radix_insert(root, dest);
 }
 
-node_t *node_find(node_t *root, char *sval) {
+node_t *radix_search(node_t *root, char *sval, int strict) {
   node_t *node = root;
   int idx = 0;
   int nidx = 0;
@@ -167,6 +168,34 @@ node_t *node_find(node_t *root, char *sval) {
     if (sval[idx] == (*node->part)[nidx]) {
 
       if (idx + 1 == sval_len) {
+        // if strictly searching we make sure that if this node has children,
+        // that a null node placement has been added. Otherwise we haven't found
+        // a real node.
+        if (strict) {
+
+          // If we aren't at the end of this node, and strict mode is enabled,
+          // then we have to reject this node.
+          if (strlen(*node->part) - 1 != nidx) {
+            return NULL;
+          }
+
+          // A leaf node is returned immediately.
+          if (node->first_child == NULL) {
+            return node;
+          }
+
+          // Go through all the children and look for a null placeholder.
+          node_t *cur = node->first_child;
+
+          while (cur != NULL) {
+            if (strlen(*cur->part) == 0) {
+              return node;
+            }
+            cur = cur->next_sibling;
+          }
+
+          return NULL;
+        }
         return node;
       }
 
@@ -194,6 +223,14 @@ node_t *node_find(node_t *root, char *sval) {
   }
 
   return NULL;
+}
+
+// list_t radix_prefix(node_t *root, char *prefix) {
+  //
+// }
+
+node_t *radix_find(node_t *root, char *sval) {
+  return radix_search(root, sval, 1);
 }
 
 void print_tree(node_t *root) {

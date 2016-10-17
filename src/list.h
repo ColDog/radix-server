@@ -15,15 +15,15 @@ typedef struct list_node {
   struct list_node *next;
 } list_node_t;
 
-list_t list_new() {
+list_t *list_new() {
   list_t *list = malloc(sizeof(list_t));
   list->head = NULL;
   list->tail = NULL;
   return list;
 }
 
-void list_push(list_t list, char *data) {
-  list_node_t *node = malloc(sizeof(node_t));
+void list_push(list_t *list, char *data) {
+  list_node_t *node = malloc(sizeof(list_node_t));
   node->next = NULL;
   node->data = data;
 
@@ -37,8 +37,8 @@ void list_push(list_t list, char *data) {
   list->tail = node;
 }
 
-void list_unshift(list_t list, char *data) {
-  list_node_t *node = malloc(sizeof(node_t));
+void list_unshift(list_t *list, char *data) {
+  list_node_t *node = malloc(sizeof(list_node_t));
   node->next = NULL;
   node->data = data;
 
@@ -52,7 +52,7 @@ void list_unshift(list_t list, char *data) {
   list->head = node;
 }
 
-int list_len(list_t list) {
+int list_len(list_t *list) {
   list_node_t *item = list->head;
   int count = 0;
   while(item != NULL) {
@@ -62,7 +62,7 @@ int list_len(list_t list) {
   return count;
 }
 
-int list_size(list_t list) {
+int list_size(list_t *list) {
   list_node_t *item = list->head;
   int count = 0;
   while(item != NULL) {
@@ -72,7 +72,7 @@ int list_size(list_t list) {
   return count;
 }
 
-char *list_join(list_t list, char *sep) {
+char *list_join(list_t *list, char *sep) {
   int sep_len = strlen(sep);
 
   list_node_t *item = list->head;
@@ -85,19 +85,14 @@ char *list_join(list_t list, char *sep) {
   }
 
   char *result = malloc(size + (strlen(sep) * count));
-  item = list->head;
-  int idx = 0;
-  while(item != NULL) {
-    int i;
-    for (i = 0; i < strlen(item->data); i++) {
-      result[idx] = item->data[i];
-      idx++;
-    }
 
-    for (i = 0; i < sep_len; i++) {
-      result[idx] = sep[i];
-      idx++;
+  item = list->head;
+  while(item != NULL) {
+    strcat(result, item->data);
+    if (item->next != NULL) {
+      strcat(result, sep);
     }
+    item = item->next;
   }
   return result;
 }

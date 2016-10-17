@@ -3,6 +3,7 @@
 #include "src/test.c"
 #include "src/radix_test.c"
 #include "src/cmd_test.c"
+#include "src/list_test.c"
 
 void tests() {
   radix_tests();

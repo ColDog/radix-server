@@ -21,111 +21,130 @@ char *rand_str(int max) {
 }
 
 char *can_find(node_t **root, char *val) {
-  node_t *res = node_find(*root, val);
+  node_t *res = radix_find(*root, val);
   if (res == NULL) {
     return "cannot find value";
   }
   return NULL;
 }
 
+char *cannot_find(node_t **root, char *val) {
+  node_t *res = radix_find(*root, val);
+  if (res != NULL) {
+    return "can find value";
+  }
+  return NULL;
+}
+
 char *test_create() {
-  node_t *n = node_snew("test");
+  node_t *n = radix_snew("test");
   return assert_not_null(n);
 }
 
 char *test_insert() {
-  node_t *n = node_snew("test");
+  node_t *n = radix_snew("test");
   node_t **root = &n;
 
-  node_sinsert(root, "teapot");
-  node_sinsert(root, "tea");
+  radix_sinsert(root, "teapot");
+  radix_sinsert(root, "tea");
 
   char *res = can_find(root, "test");
   return res;
 }
 
 char *test_insert_tea() {
-  node_t *n = node_snew("test");
+  node_t *n = radix_snew("test");
   node_t **root = &n;
 
-  node_sinsert(root, "teapot");
-  node_sinsert(root, "tea");
+  radix_sinsert(root, "teapot");
+  radix_sinsert(root, "tea");
 
   char *res = can_find(root, "tea");
   return res;
 }
 
 char *test_insert_teapot() {
-  node_t *n = node_snew("test");
+  node_t *n = radix_snew("test");
   node_t **root = &n;
 
-  node_sinsert(root, "teapot");
-  node_sinsert(root, "tea");
+  radix_sinsert(root, "teapot");
+  radix_sinsert(root, "tea");
 
   char *res = can_find(root, "teapot");
   return res;
 }
 
 char *test_insert_find_2() {
-  node_t *n = node_snew("");
+  node_t *n = radix_snew("");
   node_t **root = &n;
 
   // replicated a failing fuzz test.
-  node_sinsert(root, "a");
-  node_sinsert(root, "b");
+  radix_sinsert(root, "a");
+  radix_sinsert(root, "b");
 
   return can_find(root, "b");
 }
 
 char *test_insert_find_3() {
-  node_t *n = node_snew("t");
+  node_t *n = radix_snew("t");
   node_t **root = &n;
 
   // replicated a failing fuzz test.
-  node_sinsert(root, "a");
-  node_sinsert(root, "ta");
-  node_sinsert(root, "f");
+  radix_sinsert(root, "a");
+  radix_sinsert(root, "ta");
+  radix_sinsert(root, "f");
 
   return can_find(root, "f");
 }
 
 char *test_insert_find_4() {
-  node_t *n = node_snew("");
+  node_t *n = radix_snew("");
   node_t **root = &n;
 
   // replicated a failing fuzz test.
-  node_sinsert(root, "t");
-  node_sinsert(root, "ewk");
-  node_sinsert(root, "hs3");
-  node_sinsert(root, "hxl");
+  radix_sinsert(root, "t");
+  radix_sinsert(root, "ewk");
+  radix_sinsert(root, "hs3");
+  radix_sinsert(root, "hxl");
 
   return can_find(root, "hxl");
 }
 
 char *test_insert_find_parent() {
-  node_t *n = node_snew("");
+  node_t *n = radix_snew("");
   node_t **root = &n;
 
   // replicated a failing fuzz test.
-  node_sinsert(root, "a");
-  node_sinsert(root, "ta");
-  node_sinsert(root, "t");
+  radix_sinsert(root, "a");
+  radix_sinsert(root, "ta");
+  radix_sinsert(root, "t");
 
   return can_find(root, "t");
 }
 
-char *test_insert_find() {
-  node_t *n = node_snew("test");
+char *test_cannot_find_strict() {
+  node_t *n = radix_snew("");
   node_t **root = &n;
 
   // replicated a failing fuzz test.
-  node_sinsert(root, "hs3");
-  node_sinsert(root, "4r");
-  node_sinsert(root, "xly");
-  node_sinsert(root, "df");
-  node_sinsert(root, "pcbteodjw");
-  node_sinsert(root, "v0");
-  node_sinsert(root, "dlr");
+  radix_sinsert(root, "a");
+  radix_sinsert(root, "ta");
+
+  return cannot_find(root, "t");
+}
+
+char *test_insert_find() {
+  node_t *n = radix_snew("test");
+  node_t **root = &n;
+
+  // replicated a failing fuzz test.
+  radix_sinsert(root, "hs3");
+  radix_sinsert(root, "4r");
+  radix_sinsert(root, "xly");
+  radix_sinsert(root, "df");
+  radix_sinsert(root, "pcbteodjw");
+  radix_sinsert(root, "v0");
+  radix_sinsert(root, "dlr");
 
   char *res = can_find(root, "dlr");
   return res;
@@ -134,7 +153,7 @@ char *test_insert_find() {
 char *test_insert_fuzz() {
   int count = 100;
 
-  node_t *n = node_snew("t");
+  node_t *n = radix_snew("t");
   node_t **root = &n;
 
   int i;
@@ -144,7 +163,7 @@ char *test_insert_fuzz() {
       continue;
     }
 
-    node_sinsert(root, r);
+    radix_sinsert(root, r);
 
     char *res = can_find(root, r);
     if (res != NULL) {
@@ -168,5 +187,6 @@ void radix_tests() {
   test("fuzz find 2", test_insert_find_2);
   test("fuzz find 3", test_insert_find_3);
   test("fuzz find 4", test_insert_find_4);
-  test("test insert find parent", test_insert_find_parent);
+  test("find parent", test_insert_find_parent);
+  test("cannot find", test_cannot_find_strict);
 }
