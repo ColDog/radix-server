@@ -7,6 +7,7 @@
 void tests() {
   radix_tests();
   cmd_tests();
+  list_tests();
 }
 
 int main() {
