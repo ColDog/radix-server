@@ -176,6 +176,18 @@ char *test_insert_fuzz() {
   return NULL;
 }
 
+char *test_prefix_query() {
+  node_t *n = radix_snew("");
+  node_t **root = &n;
+
+  radix_sinsert(root, "foo");
+  radix_sinsert(root, "foobar");
+  radix_sinsert(root, "foobaz");
+
+  list_t *res = radix_prefix(*root, "foo");
+  return assert_str_equal("foo, foobar, foobaz", list_join(res, ", "));
+}
+
 void radix_tests() {
   describe("radix tree");
   test("create", test_create);
@@ -189,4 +201,5 @@ void radix_tests() {
   test("fuzz find 4", test_insert_find_4);
   test("find parent", test_insert_find_parent);
   test("cannot find", test_cannot_find_strict);
+  test("prefix", test_prefix_query);
 }

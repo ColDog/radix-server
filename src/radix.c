@@ -31,15 +31,16 @@ typedef struct node {
   node_key_t *part;
   struct node *first_child;
   struct node *next_sibling;
+  int start_idx;
 } node_t;
 
-node_t *radix_new(node_key_t *part) {
+node_t *radix_new(node_key_t *part, int idx) {
   node_t *node = NULL;
   node = malloc(sizeof(node_t));
   node->part = part;
   node->first_child = NULL;
   node->next_sibling = NULL;
-
+  node->start_idx = idx;
 
   return node;
 }
@@ -48,10 +49,10 @@ node_t *radix_new(node_key_t *part) {
 node_t *radix_snew(char *s) {
   node_key_t *dest = malloc(sizeof(node_key_t));
   strncpy(*dest, s, strlen(s));
-  return radix_new(dest);
+  return radix_new(dest, 0);
 }
 
-void radix_insert(node_t **root, node_key_t *val) {
+void radix_insert(node_t **root, node_key_t *val, int start_idx) {
   node_t *node = *root;
 
   // if this is a null node, we just add the value to this.
@@ -64,18 +65,19 @@ void radix_insert(node_t **root, node_key_t *val) {
 
   for (i = 0; i < strlen(*node->part); i++) {
     if ((*val)[i] != (*node->part)[i]) {
+      start_idx += i;
 
       // Split the node into two parts depending on the incoming
       // values. The original node takes over as the
 
       // create a 'next_node' which takes over this nodes children.
-      node_t *next_node = radix_new(from(node->part, i));
+      node_t *next_node = radix_new(from(node->part, i), start_idx);
       next_node->first_child = node->first_child;
       node->first_child = next_node;
 
 
       // create a new sibling.
-      node_t *new_sibling = radix_new(from(val, i));
+      node_t *new_sibling = radix_new(from(val, i), start_idx);
       next_node->next_sibling = new_sibling;
 
 
@@ -88,11 +90,12 @@ void radix_insert(node_t **root, node_key_t *val) {
 
   // the piece after where we've gotten too.
   node_key_t *next_part = from(val, i);
+  start_idx += i;
 
   // We reached the end, that means everything matches with this insert so far.
   if (node->first_child == NULL) {
     // this node doesn't have any children yet! we can add ourselves as the first.
-    node->first_child = radix_new(next_part);
+    node->first_child = radix_new(next_part, start_idx);
     return;
   }
 
@@ -105,7 +108,7 @@ void radix_insert(node_t **root, node_key_t *val) {
     while (cur->next_sibling != NULL) {
       cur = cur->next_sibling;
     }
-    cur->next_sibling = radix_new(next_part);
+    cur->next_sibling = radix_new(next_part, start_idx);
     return;
   }
 
@@ -118,7 +121,7 @@ void radix_insert(node_t **root, node_key_t *val) {
       // we found a sibling to continue on with!
       // insert will walk through this sibling and either split it or find a
       // child to add it to.
-      return radix_insert(&cur, next_part);
+      return radix_insert(&cur, next_part, start_idx);
     }
 
     if (cur->next_sibling == NULL) {
@@ -131,13 +134,32 @@ void radix_insert(node_t **root, node_key_t *val) {
   // No siblings start with what this starts with, so, lets create the sibling!
   // Note, since we reached the end 'cur' should be the last sibling.
   // printf("adding next part %s as sibling of %s\n", *next_part, *cur->part);
-  cur->next_sibling = radix_new(next_part);
+  cur->next_sibling = radix_new(next_part, start_idx);
 }
 
 void radix_sinsert(node_t **root, char *sval) {
   node_key_t *dest = malloc(sizeof(node_key_t));
   strncpy(*dest, sval, strlen(sval));
-  return radix_insert(root, dest);
+  return radix_insert(root, dest, 0);
+}
+
+int radix_is_node(node_t *node) {
+  // A leaf node is returned immediately.
+  if (node->first_child == NULL) {
+    return 1;
+  }
+
+  // Go through all the children and look for a null placeholder.
+  node_t *cur = node->first_child;
+
+  while (cur != NULL) {
+    if (strlen(*cur->part) == 0) {
+      return 1;
+    }
+    cur = cur->next_sibling;
+  }
+
+  return 0;
 }
 
 node_t *radix_search(node_t *root, char *sval, int strict) {
@@ -179,19 +201,8 @@ node_t *radix_search(node_t *root, char *sval, int strict) {
             return NULL;
           }
 
-          // A leaf node is returned immediately.
-          if (node->first_child == NULL) {
+          if (radix_is_node(node)) {
             return node;
-          }
-
-          // Go through all the children and look for a null placeholder.
-          node_t *cur = node->first_child;
-
-          while (cur != NULL) {
-            if (strlen(*cur->part) == 0) {
-              return node;
-            }
-            cur = cur->next_sibling;
           }
 
           return NULL;
@@ -225,9 +236,43 @@ node_t *radix_search(node_t *root, char *sval, int strict) {
   return NULL;
 }
 
-// list_t radix_prefix(node_t *root, char *prefix) {
-  //
-// }
+list_t *radix_prefix(node_t *root, char *prefix) {
+  char *val = malloc(strlen(prefix) + 30);
+
+  list_t *resp = list_new();
+  node_t *node = radix_search(root, prefix, 0);
+
+  if (node == NULL) return resp;
+
+
+  strcpy(val, prefix);
+  const char *last_piece = &(*node->part)[strlen(*node->part) - node->start_idx];
+  strcat(val, last_piece);
+
+  while (node != NULL) {
+    printf("val: %s\n", val);
+
+    char *name = malloc(strlen(*node->part));
+    strcpy(name, val);
+
+    last_piece = &(*node->part)[strlen(*node->part) - node->start_idx];
+    strcat(name, last_piece);
+
+    if (radix_is_node(node)) {
+      list_push(resp, name);
+    }
+
+    if (node->next_sibling == NULL) {
+      strcat(val, *node->part);
+      node = node->first_child;
+    } else {
+      node = node->next_sibling;
+    }
+  }
+
+  free(val);
+  return resp;
+}
 
 node_t *radix_find(node_t *root, char *sval) {
   return radix_search(root, sval, 1);

@@ -12,7 +12,16 @@ typedef void (*tests_t)();
 
 char *assert_int_equal(int expected, int actual) {
   if (expected != actual) {
+    printf("\n    expected = %d\n    actual = %d\n", expected, actual);
     return "values do not match";
+  }
+  return NULL;
+}
+
+char *assert_not_int_equal(int expected, int actual) {
+  if (expected == actual) {
+    printf("\n    expected = %d\n    actual = %d\n", expected, actual);
+    return "values do match";
   }
   return NULL;
 }
